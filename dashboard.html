@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="dashboard.css">
+    <title>LaunchPad Dashboard</title>
+    <script src="theme.js"></script>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1>LaunchPad</h1>
+            <div class="header-right">
+                <span id="user-details"></span>
+                <button id="theme-toggle-btn" class="theme-toggle">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+                <button id="logout-button">Logout</button>
+            </div>
+        </div>
+        
+        <div id="role-specific-forms"></div>
+        <hr>
+
+        <div class="tabs">
+            <button class="tab-link active" data-tab="proposals" data-role="all">Business Proposals</button>
+            <button class="tab-link" data-tab="investors" data-role="all">Active Investors</button>
+            <button class="tab-link" data-tab="saved" data-role="investor" style="display: none;">Saved Proposals</button>
+            <button class="tab-link" data-tab="loans" data-role="all">Loan Offers</button>
+            <button class="tab-link" data-tab="articles" data-role="all">Advisor Articles</button>
+        </div>
+
+        <div id="proposals" class="tab-content active">
+            <h2>Available Business Proposals</h2>
+            <div class="filter-controls">
+                <input type="text" id="search-input" placeholder="Search by title...">
+                <select id="industry-filter">
+                    <option value="">All Industries</option>
+                    <option value="technology">Technology</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="finance">Finance</option>
+                    <option value="education">Education</option>
+                    <option value="retail">Retail</option>
+                </select>
+                <button id="filter-button">Apply Filters</button>
+            </div>
+            <div id="proposals-list"></div>
+        </div>
+
+        <div id="saved" class="tab-content">
+            <h2>My Saved Proposals</h2>
+            <div id="saved-proposals-list"></div>
+        </div>
+
+        <div id="investors" class="tab-content">
+            <h2>Active Investors</h2>
+            <div id="investors-list"></div>
+        </div>
+
+        <div id="loans" class="tab-content">
+            <h2>Available Loan Offers</h2>
+            <div id="loans-list"></div>
+        </div>
+
+        <div id="articles" class="tab-content">
+            <h2>Information from Advisors</h2>
+            <div id="articles-list"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    
+    <script src="dashboard.js"></script>
+</body>
+</html>
