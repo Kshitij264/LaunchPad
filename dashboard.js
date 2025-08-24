@@ -25,6 +25,30 @@ const articlesList = document.getElementById('articles-list');
 const tabs = document.querySelectorAll('.tab-link');
 const tabContents = document.querySelectorAll('.tab-content');
 const filterButton = document.getElementById('filter-button');
+const chatModal = document.getElementById('chat-modal');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const chatTitle = document.getElementById('chat-title');
+const chatMessages = document.getElementById('chat-messages');
+const messageForm = document.getElementById('message-form');
+const messageInput = document.getElementById('message-input');
+const conversationsList = document.getElementById('conversations-list');
+const messageNotification = document.getElementById('message-notification');
+
+// --- GLOBAL VARIABLES ---
+let currentConversationId = null;
+let messageUnsubscribe = null;
+let conversationsUnsubscribe = null;
+
+// --- SKELETON TEMPLATE ---
+const skeletonCardHTML = `
+    <div class="skeleton-card">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-tag"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text-short"></div>
+        <div class="skeleton skeleton-funding"></div>
+    </div>
+`;
 
 // --- TAB SWITCHING LOGIC ---
 tabs.forEach(tab => {
@@ -39,7 +63,7 @@ tabs.forEach(tab => {
 
 // --- DATA FETCHING & DISPLAY FUNCTIONS ---
 const fetchAndDisplayProposals = async (industry = '', searchTerm = '') => {
-    proposalsList.innerHTML = '';
+    proposalsList.innerHTML = skeletonCardHTML.repeat(3);
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
@@ -52,49 +76,53 @@ const fetchAndDisplayProposals = async (industry = '', searchTerm = '') => {
         query = query.where('industry', '==', industry);
     }
 
-    query.get().then((snapshot) => {
-        let proposals = snapshot.docs;
-        if (searchTerm) {
-            proposals = proposals.filter(doc => doc.data().title.toLowerCase().includes(searchTerm.toLowerCase()));
-        }
+    const snapshot = await query.get();
+    
+    let proposals = snapshot.docs;
+    if (searchTerm) {
+        proposals = proposals.filter(doc => doc.data().title.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
 
-        if (proposals.length === 0) {
-            proposalsList.innerHTML = '<p>No business proposals found matching your criteria.</p>';
-            return;
-        }
+    if (proposals.length === 0) {
+        proposalsList.innerHTML = '<p>No business proposals found matching your criteria.</p>';
+        return;
+    }
 
-        proposals.forEach((doc) => {
-            const p = doc.data();
-            const isSaved = savedProposals.includes(doc.id);
-            const savedClass = isSaved ? 'saved' : '';
-            
-            let saveButtonHTML = '';
-            if (userData.role === 'investor') {
-                saveButtonHTML = `
-                    <button class="save-btn ${savedClass}" data-id="${doc.id}">
-                        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    </button>`;
-            }
-            
-            proposalsList.innerHTML += `
-                <div class="card proposal-card">
-                    ${saveButtonHTML}
-                    <h3>${p.title}</h3>
-                    <p class="industry">${p.industry}</p>
-                    <p>${p.description}</p>
-                    <p class="funding">Funding Required: $${p.fundingRequired.toLocaleString()}</p>
-                </div>`;
-        });
-    });
+    proposalsList.innerHTML = '';
+    for (const doc of proposals) {
+        const p = doc.data();
+        const isSaved = savedProposals.includes(doc.id);
+        const savedClass = isSaved ? 'saved' : '';
+        
+        const ownerDoc = await db.collection('users').doc(p.ownerId).get();
+        const ownerName = ownerDoc.exists ? ownerDoc.data().fullName : "Owner";
+
+        let saveButtonHTML = '';
+        if (userData.role === 'investor') {
+            saveButtonHTML = `<button class="save-btn ${savedClass}" data-id="${doc.id}"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></button>`;
+        }
+        
+        const contactButtonHTML = (userData.role === 'investor' && p.ownerId !== currentUser.uid)
+            ? `<button class="contact-btn" data-owner-id="${p.ownerId}" data-proposal-id="${doc.id}" data-proposal-title="${p.title}">Contact Owner</button>`
+            : '';
+
+        proposalsList.innerHTML += `
+            <div class="card proposal-card">
+                ${saveButtonHTML}
+                <h3>${p.title}</h3>
+                <p class="industry">${p.industry}</p>
+                <p>${p.description}</p>
+                <p class="funding">Funding Required: $${p.fundingRequired.toLocaleString()}</p>
+                ${contactButtonHTML}
+            </div>`;
+    }
 };
 
 const fetchAndDisplayInvestors = () => {
-    investorsList.innerHTML = '';
+    investorsList.innerHTML = skeletonCardHTML.repeat(3);
     db.collection('investorProposals').orderBy('createdAt', 'desc').get().then((snapshot) => {
-        if (snapshot.empty) {
-            investorsList.innerHTML = '<p>No investors have created a profile yet.</p>';
-            return;
-        }
+        if (snapshot.empty) { investorsList.innerHTML = '<p>No investors have created a profile yet.</p>'; return; }
+        investorsList.innerHTML = '';
         snapshot.forEach((doc) => {
             const i = doc.data();
             investorsList.innerHTML += `<div class="card investor-card"><h3>${i.fullName}</h3><p><b>Bio:</b> ${i.bio}</p><p class="range"><b>Range:</b> ${i.range}</p><p><b>Interested in:</b> ${i.industries}</p></div>`;
@@ -103,7 +131,7 @@ const fetchAndDisplayInvestors = () => {
 };
 
 const fetchAndDisplaySavedProposals = async () => {
-    savedProposalsList.innerHTML = '';
+    savedProposalsList.innerHTML = skeletonCardHTML.repeat(2);
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
@@ -117,6 +145,7 @@ const fetchAndDisplaySavedProposals = async () => {
 
     const proposalsSnapshot = await db.collection('businessProposals').where(firebase.firestore.FieldPath.documentId(), 'in', savedIds).get();
     
+    savedProposalsList.innerHTML = '';
     proposalsSnapshot.forEach(doc => {
         const p = doc.data();
         savedProposalsList.innerHTML += `
@@ -130,12 +159,10 @@ const fetchAndDisplaySavedProposals = async () => {
 };
 
 const fetchAndDisplayLoans = () => {
-    loansList.innerHTML = '';
+    loansList.innerHTML = skeletonCardHTML.repeat(2);
     db.collection('loanOffers').orderBy('postedAt', 'desc').get().then(snapshot => {
-        if(snapshot.empty) {
-            loansList.innerHTML = '<p>No loan offers posted yet.</p>';
-            return;
-        }
+        if(snapshot.empty) { loansList.innerHTML = '<p>No loan offers posted yet.</p>'; return; }
+        loansList.innerHTML = '';
         snapshot.forEach(doc => {
             const l = doc.data();
             loansList.innerHTML += `<div class="card loan-card"><h3>${l.title}</h3><p class="bank">by ${l.bankName}</p><p class="rate">Interest Rate: ${l.interestRate}%</p><p>${l.description}</p></div>`;
@@ -144,12 +171,10 @@ const fetchAndDisplayLoans = () => {
 };
 
 const fetchAndDisplayArticles = () => {
-    articlesList.innerHTML = '';
+    articlesList.innerHTML = skeletonCardHTML.repeat(2);
     db.collection('advisorArticles').orderBy('postedAt', 'desc').get().then(snapshot => {
-        if(snapshot.empty) {
-            articlesList.innerHTML = '<p>No articles posted yet.</p>';
-            return;
-        }
+        if(snapshot.empty) { articlesList.innerHTML = '<p>No articles posted yet.</p>'; return; }
+        articlesList.innerHTML = '';
         snapshot.forEach(doc => {
             const a = doc.data();
             articlesList.innerHTML += `<div class="card article-card"><h3>${a.title}</h3><p class="content">${a.content}</p><p class="author">By: ${a.authorName}</p></div>`;
@@ -157,6 +182,66 @@ const fetchAndDisplayArticles = () => {
     });
 };
 
+const fetchAndDisplayConversations = () => {
+    if (conversationsUnsubscribe) conversationsUnsubscribe();
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    conversationsList.innerHTML = skeletonCardHTML.repeat(2);
+    const conversationsRef = db.collection('conversations').where('participants', 'array-contains', currentUser.uid).orderBy('lastUpdate', 'desc');
+
+    conversationsUnsubscribe = conversationsRef.onSnapshot(async (snapshot) => {
+        if (snapshot.empty) { conversationsList.innerHTML = '<p>You have no active conversations.</p>'; return; }
+
+        let unreadConversationsExist = false;
+        let conversationsHTML = '';
+
+        for (const doc of snapshot.docs) {
+            const convo = doc.data();
+            const otherParticipantId = convo.participants.find(p => p !== currentUser.uid);
+
+            if (otherParticipantId) {
+                const userDoc = await db.collection('users').doc(otherParticipantId).get();
+                const otherUserName = userDoc.exists ? userDoc.data().fullName : "Unknown User";
+                const isUnread = convo.lastSenderId !== currentUser.uid && (!convo.readBy || !convo.readBy.includes(currentUser.uid));
+                if (isUnread) unreadConversationsExist = true;
+
+                conversationsHTML += `<div class="conversation-item" data-id="${doc.id}" data-title="${convo.proposalTitle}"><h4 class="${isUnread ? 'unread' : ''}">${convo.proposalTitle}</h4><p>Conversation with ${otherUserName} ${isUnread ? '<b>(New Message)</b>' : ''}</p></div>`;
+            }
+        }
+        conversationsList.innerHTML = conversationsHTML;
+        messageNotification.style.display = unreadConversationsExist ? 'block' : 'none';
+    });
+};
+
+// --- CHAT MODAL FUNCTIONS ---
+const openChatModal = (conversationId, title) => {
+    currentConversationId = conversationId;
+    chatTitle.textContent = `Chat: ${title}`;
+    chatModal.style.display = 'flex';
+
+    const messagesRef = db.collection('conversations').doc(conversationId).collection('messages').orderBy('timestamp');
+    messageUnsubscribe = messagesRef.onSnapshot(snapshot => {
+        chatMessages.innerHTML = '';
+        snapshot.forEach(doc => {
+            const msg = doc.data();
+            const messageClass = msg.senderId === auth.currentUser.uid ? 'sent' : 'received';
+            chatMessages.innerHTML += `<div class="message ${messageClass}">${msg.text}</div>`;
+        });
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+
+    db.collection('conversations').doc(conversationId).update({ readBy: firebase.firestore.FieldValue.arrayUnion(auth.currentUser.uid) });
+};
+
+const closeChatModal = () => {
+    if (messageUnsubscribe) messageUnsubscribe();
+    chatModal.style.display = 'none';
+    currentConversationId = null;
+    messageInput.value = '';
+};
+
+// --- FORM INJECTION & LISTENERS ---
 const injectRoleForm = (role, uid, fullName) => {
     let formHTML = '';
     if (role === 'business_person') {
@@ -174,17 +259,17 @@ const injectRoleForm = (role, uid, fullName) => {
 
 const attachFormListeners = (role, uid, fullName) => {
     if (role === 'business_person') {
-        document.getElementById('idea-form').addEventListener('submit', e => { e.preventDefault(); db.collection('businessProposals').add({ ownerId: uid, title: e.target['idea-title'].value, description: e.target['idea-description'].value, industry: e.target['idea-industry'].value, fundingRequired: Number(e.target['idea-funding'].value), submittedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Idea submitted!'); e.target.reset(); fetchAndDisplayProposals(); }); });
+        document.getElementById('idea-form').addEventListener('submit', e => { e.preventDefault(); db.collection('businessProposals').add({ ownerId: uid, ownerName: fullName, title: e.target['idea-title'].value, description: e.target['idea-description'].value, industry: e.target['idea-industry'].value, fundingRequired: Number(e.target['idea-funding'].value), submittedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Idea submitted!'); e.target.reset(); fetchAndDisplayProposals(); }); });
     } else if (role === 'investor') {
         document.getElementById('investor-form').addEventListener('submit', e => { e.preventDefault(); db.collection('investorProposals').add({ investorId: uid, fullName: fullName, industries: e.target['investor-industries'].value, range: e.target['investor-range'].value, bio: e.target['investor-bio'].value, createdAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Profile created!'); e.target.reset(); fetchAndDisplayInvestors(); }); });
     } else if (role === 'banker') {
-        document.getElementById('loan-form').addEventListener('submit', e => { e.preventDefault(); db.collection('loanOffers').add({ title: e.target['loan-title'].value, bankName: e.target['bank-name'].value, interestRate: Number(e.target['loan-interest'].value), description: e.target['loan-description'].value, postedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Loan offer posted!'); e.target.reset(); fetchAndDisplayLoans(); }); });
+        document.getElementById('loan-form').addEventListener('submit', e => { e.preventDefault(); db.collection('loanOffers').add({ posterId: uid, bankName: e.target['bank-name'].value, title: e.target['loan-title'].value, interestRate: Number(e.target['loan-interest'].value), description: e.target['loan-description'].value, postedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Loan offer posted!'); e.target.reset(); fetchAndDisplayLoans(); }); });
     } else if (role === 'business_advisor') {
         document.getElementById('article-form').addEventListener('submit', e => { e.preventDefault(); db.collection('advisorArticles').add({ authorId: uid, authorName: fullName, title: e.target['article-title'].value, content: e.target['article-content'].value, postedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { alert('Article posted!'); e.target.reset(); fetchAndDisplayArticles(); }); });
     }
 };
 
-// --- MAIN AUTH LOGIC ---
+// --- MAIN AUTH LOGIC & EVENT LISTENERS ---
 auth.onAuthStateChanged(user => {
     if (user) {
         db.collection('users').doc(user.uid).get().then(doc => {
@@ -198,27 +283,89 @@ auth.onAuthStateChanged(user => {
             }
         });
         fetchAndDisplayProposals();
+        fetchAndDisplayConversations();
         fetchAndDisplayInvestors();
         fetchAndDisplayLoans();
         fetchAndDisplayArticles();
         fetchAndDisplaySavedProposals();
     } else {
+        if (conversationsUnsubscribe) conversationsUnsubscribe();
         window.location.href = 'index.html';
     }
 });
 
-proposalsList.addEventListener('click', (e) => {
+proposalsList.addEventListener('click', async (e) => {
     const saveButton = e.target.closest('.save-btn');
     if (saveButton) {
         const proposalId = saveButton.dataset.id;
         const userRef = db.collection('users').doc(auth.currentUser.uid);
         if (saveButton.classList.contains('saved')) {
-            userRef.update({ savedProposals: firebase.firestore.FieldValue.arrayRemove(proposalId) }).then(() => { saveButton.classList.remove('saved'); });
+            userRef.update({ savedProposals: firebase.firestore.FieldValue.arrayRemove(proposalId) });
+            saveButton.classList.remove('saved');
         } else {
-            userRef.update({ savedProposals: firebase.firestore.FieldValue.arrayUnion(proposalId) }).then(() => { saveButton.classList.add('saved'); });
+            userRef.update({ savedProposals: firebase.firestore.FieldValue.arrayUnion(proposalId) });
+            saveButton.classList.add('saved');
+        }
+        return;
+    }
+
+    const contactButton = e.target.closest('.contact-btn');
+    if (contactButton) {
+        const ownerId = contactButton.dataset.ownerId;
+        const proposalId = contactButton.dataset.proposalId;
+        const proposalTitle = contactButton.dataset.proposalTitle;
+        const currentUserId = auth.currentUser.uid;
+
+        const conversationQuery = db.collection('conversations').where('proposalId', '==', proposalId).where('participants', 'array-contains', currentUserId);
+        const querySnapshot = await conversationQuery.get();
+        let existingConversation = null;
+        querySnapshot.forEach(doc => {
+            if (doc.data().participants.includes(ownerId)) existingConversation = doc;
+        });
+
+        if (existingConversation) {
+            openChatModal(existingConversation.id, proposalTitle);
+        } else {
+            const newConversation = await db.collection('conversations').add({
+                proposalId: proposalId,
+                proposalTitle: proposalTitle,
+                participants: [currentUserId, ownerId],
+                lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+                readBy: [currentUserId]
+            });
+            openChatModal(newConversation.id, proposalTitle);
         }
     }
 });
+
+conversationsList.addEventListener('click', (e) => {
+    const conversationItem = e.target.closest('.conversation-item');
+    if (conversationItem) {
+        openChatModal(conversationItem.dataset.id, conversationItem.dataset.title);
+    }
+});
+
+messageForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!messageInput.value.trim() || !currentConversationId) return;
+    const text = messageInput.value;
+    messageInput.value = '';
+    const currentUser = auth.currentUser;
+
+    db.collection('conversations').doc(currentConversationId).collection('messages').add({
+        text: text,
+        senderId: currentUser.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    db.collection('conversations').doc(currentConversationId).update({
+        lastUpdate: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSenderId: currentUser.uid,
+        readBy: [currentUser.uid]
+    });
+});
+
+closeModalBtn.addEventListener('click', closeChatModal);
 
 filterButton.addEventListener('click', () => {
     const industry = document.getElementById('industry-filter').value;
@@ -226,4 +373,7 @@ filterButton.addEventListener('click', () => {
     fetchAndDisplayProposals(industry, searchTerm);
 });
 
-logoutButton.addEventListener('click', () => auth.signOut());
+logoutButton.addEventListener('click', () => {
+    if (conversationsUnsubscribe) conversationsUnsubscribe();
+    auth.signOut();
+});

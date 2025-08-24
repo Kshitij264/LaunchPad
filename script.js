@@ -24,12 +24,14 @@ const showRegisterLink = document.getElementById('show-register');
 const showLoginLink = document.getElementById('show-login');
 
 // Toggle between login and register forms
-showRegisterLink.addEventListener('click', () => {
+showRegisterLink.addEventListener('click', (e) => {
+    e.preventDefault();
     loginContainer.style.display = 'none';
     registerContainer.style.display = 'block';
 });
 
-showLoginLink.addEventListener('click', () => {
+showLoginLink.addEventListener('click', (e) => {
+    e.preventDefault();
     registerContainer.style.display = 'none';
     loginContainer.style.display = 'block';
 });
@@ -37,7 +39,6 @@ showLoginLink.addEventListener('click', () => {
 // Handle registration form submission
 registerForm.addEventListener('submit', (e) => {
     e.preventDefault(); 
-
     const name = document.getElementById('register-name').value;
     const email = document.getElementById('register-email').value;
     const password = document.getElementById('register-password').value;
@@ -50,6 +51,7 @@ registerForm.addEventListener('submit', (e) => {
                 fullName: name,
                 email: email,
                 role: role,
+                savedProposals: [],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
         })
@@ -68,7 +70,6 @@ registerForm.addEventListener('submit', (e) => {
 // Handle login form submission
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
