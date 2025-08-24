@@ -1,4 +1,4 @@
-// Your web app's Firebase configuration
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyBQAM4oJb72i0fYyREhfHQ-1TSdCMMDi3g",
   authDomain: "launchpad-bacef.firebaseapp.com",
@@ -10,76 +10,158 @@ const firebaseConfig = {
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-
-// Initialize Firebase services
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Get references to DOM elements
-const loginForm = document.getElementById('login-form');
-const registerForm = document.getElementById('register-form');
-const loginContainer = document.getElementById('login-form-container');
-const registerContainer = document.getElementById('register-form-container');
-const showRegisterLink = document.getElementById('show-register');
-const showLoginLink = document.getElementById('show-login');
+document.addEventListener('DOMContentLoaded', () => {
+    // Modal Elements
+    const authModal = document.getElementById('auth-modal');
+    const closeAuthModalBtn = document.getElementById('close-auth-modal');
+    const loginBtnNav = document.getElementById('login-btn-nav');
+    const signupBtnNav = document.getElementById('signup-btn-nav');
+    const getStartedBtn = document.getElementById('get-started-btn');
+    
+    // Form Elements
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginContainer = document.getElementById('login-form-container');
+    const registerContainer = document.getElementById('register-form-container');
+    const showRegisterLink = document.getElementById('show-register');
+    const showLoginLink = document.getElementById('show-login');
 
-// Toggle between login and register forms
-showRegisterLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    loginContainer.style.display = 'none';
-    registerContainer.style.display = 'block';
-});
+    // --- Modal Logic ---
+    const openModal = (showRegister = false) => {
+        if (authModal) {
+            authModal.style.display = 'flex';
+        }
+        if (showRegister) {
+            loginContainer.style.display = 'none';
+            registerContainer.style.display = 'block';
+        } else {
+            loginContainer.style.display = 'block';
+            registerContainer.style.display = 'none';
+        }
+    };
 
-showLoginLink.addEventListener('click', (e) => {
-    e.preventDefault();
-    registerContainer.style.display = 'none';
-    loginContainer.style.display = 'block';
-});
+    const closeModal = () => {
+        if (authModal) {
+            authModal.style.display = 'none';
+        }
+    };
 
-// Handle registration form submission
-registerForm.addEventListener('submit', (e) => {
-    e.preventDefault(); 
-    const name = document.getElementById('register-name').value;
-    const email = document.getElementById('register-email').value;
-    const password = document.getElementById('register-password').value;
-    const role = document.getElementById('register-role').value;
+    if (loginBtnNav) loginBtnNav.addEventListener('click', () => openModal(false));
+    if (signupBtnNav) signupBtnNav.addEventListener('click', () => openModal(true));
+    if (getStartedBtn) getStartedBtn.addEventListener('click', () => openModal(true));
+    if (closeAuthModalBtn) closeAuthModalBtn.addEventListener('click', closeModal);
+    if (authModal) {
+        authModal.addEventListener('click', (e) => {
+            if (e.target === authModal) {
+                closeModal();
+            }
+        });
+    }
 
-    auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            console.log('User created:', userCredential.user.uid);
-            return db.collection('users').doc(userCredential.user.uid).set({
-                fullName: name,
-                email: email,
-                role: role,
-                savedProposals: [],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        })
-        .then(() => {
-            alert('Registration successful! Please log in.');
+    // --- Form Toggle Logic ---
+    if (showRegisterLink) {
+        showRegisterLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginContainer.style.display = 'none';
+            registerContainer.style.display = 'block';
+        });
+    }
+
+    if (showLoginLink) {
+        showLoginLink.addEventListener('click', (e) => {
+            e.preventDefault();
             registerContainer.style.display = 'none';
             loginContainer.style.display = 'block';
-            registerForm.reset(); 
-        })
-        .catch((error) => {
-            console.error('Error during registration:', error);
-            alert('Error: ' + error.message);
         });
+    }
+
+    // --- Firebase Auth Logic ---
+    if (registerForm) {
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault(); 
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const role = document.getElementById('register-role').value;
+
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    return db.collection('users').doc(userCredential.user.uid).set({
+                        fullName: name,
+                        email: email,
+                        role: role,
+                        savedProposals: [],
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                })
+                .then(() => {
+                    alert('Registration successful! Please log in.');
+                    openModal(false);
+                })
+                .catch((error) => {
+                    console.error('Error during registration:', error);
+                    alert('Error: ' + error.message);
+                });
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    window.location.href = 'dashboard.html';
+                })
+                .catch((error) => {
+                    console.error('Error during login:', error);
+                    alert('Error: ' + error.message);
+                });
+        });
+    }
+    
+    // Initialize the map after the DOM is ready
+    initializeMap();
 });
 
-// Handle login form submission
-loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
 
-    auth.signInWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            console.log('User logged in:', userCredential.user.uid);
-            window.location.href = 'dashboard.html';
-        })
-        .catch((error) => {
-            console.error('Error during login:', error);
-            alert('Error: ' + error.message);
-        });
-});
+// NEW: Leaflet.js Map Initialization and Heatmap Logic
+function initializeMap() {
+    const mapElement = document.getElementById('map');
+    if (!mapElement) return; // Don't run if map element isn't on the page
+
+    const heatmapData = [
+        [12.9716, 77.5946, 0.9], // Bangalore
+        [28.6139, 77.2090, 0.8], // Delhi
+        [19.0760, 72.8777, 0.7], // Mumbai
+        [17.3850, 78.4867, 0.6], // Hyderabad
+        [18.5204, 73.8567, 0.5], // Pune
+        [13.0827, 80.2707, 0.4], // Chennai
+        [22.5726, 88.3639, 0.3]  // Kolkata
+    ];
+
+    const currentTheme = localStorage.getItem('theme');
+    const isDarkMode = currentTheme === 'dark';
+
+    const lightTiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    const darkTiles = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+    const tileUrl = isDarkMode ? darkTiles : lightTiles;
+
+    const map = L.map('map', { scrollWheelZoom: false }).setView([22.5937, 78.9629], 5);
+
+    L.tileLayer(tileUrl, {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    L.heatLayer(heatmapData, {
+        radius: 35,
+        blur: 20,
+        maxZoom: 10,
+        gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+    }).addTo(map);
+}
