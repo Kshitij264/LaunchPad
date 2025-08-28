@@ -31,9 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Modal Logic ---
     const openModal = (showRegister = false) => {
-        if (authModal) {
-            authModal.style.display = 'flex';
-        }
+        if (authModal) authModal.style.display = 'flex';
         if (showRegister) {
             loginContainer.style.display = 'none';
             registerContainer.style.display = 'block';
@@ -44,9 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const closeModal = () => {
-        if (authModal) {
-            authModal.style.display = 'none';
-        }
+        if (authModal) authModal.style.display = 'none';
     };
 
     if (loginBtnNav) loginBtnNav.addEventListener('click', () => openModal(false));
@@ -55,9 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeAuthModalBtn) closeAuthModalBtn.addEventListener('click', closeModal);
     if (authModal) {
         authModal.addEventListener('click', (e) => {
-            if (e.target === authModal) {
-                closeModal();
-            }
+            if (e.target === authModal) closeModal();
         });
     }
 
@@ -86,14 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             const role = document.getElementById('register-role').value;
-
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
                     return db.collection('users').doc(userCredential.user.uid).set({
-                        fullName: name,
-                        email: email,
-                        role: role,
-                        savedProposals: [],
+                        fullName: name, email: email, role: role, savedProposals: [],
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 })
@@ -113,11 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
-
             auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    window.location.href = 'dashboard.html';
-                })
+                .then(() => { window.location.href = 'dashboard.html'; })
                 .catch((error) => {
                     console.error('Error during login:', error);
                     alert('Error: ' + error.message);
@@ -125,24 +112,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Initialize the map after the DOM is ready
     initializeMap();
 });
 
 
-// NEW: Leaflet.js Map Initialization and Heatmap Logic
+// Leaflet.js Map Initialization and Heatmap Logic
 function initializeMap() {
     const mapElement = document.getElementById('map');
-    if (!mapElement) return; // Don't run if map element isn't on the page
+    if (!mapElement) return;
 
     const heatmapData = [
-        [12.9716, 77.5946, 0.9], // Bangalore
-        [28.6139, 77.2090, 0.8], // Delhi
-        [19.0760, 72.8777, 0.7], // Mumbai
-        [17.3850, 78.4867, 0.6], // Hyderabad
-        [18.5204, 73.8567, 0.5], // Pune
-        [13.0827, 80.2707, 0.4], // Chennai
-        [22.5726, 88.3639, 0.3]  // Kolkata
+        [12.9716, 77.5946, 1.0], // Bangalore
+        [28.6139, 77.2090, 0.95], // Delhi
+        [19.0760, 72.8777, 0.9], // Mumbai
+        [17.3850, 78.4867, 0.8], // Hyderabad
+        [18.5204, 73.8567, 0.75], // Pune
+        [13.0827, 80.2707, 0.7], // Chennai
+        [22.5726, 88.3639, 0.6],  // Kolkata
+        [23.0225, 72.5714, 0.55], // Ahmedabad
+        [30.7333, 76.7794, 0.5],  // Chandigarh
+        [26.9124, 75.7873, 0.4],  // Jaipur
+        [21.1702, 72.8311, 0.4]   // Surat
     ];
 
     const currentTheme = localStorage.getItem('theme');
@@ -158,10 +148,18 @@ function initializeMap() {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(map);
 
+    // UPDATED: More vibrant and visible heatmap settings
     L.heatLayer(heatmapData, {
-        radius: 35,
+        minOpacity: 0.6, // Increased minimum opacity for better visibility
+        radius: 35,      // Slightly larger radius
         blur: 20,
         maxZoom: 10,
-        gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+        max: 1.0,
+        gradient: {
+            0.4: 'blue',
+            0.65: 'lime',
+            0.8: 'yellow',
+            1.0: 'red'
+        }
     }).addTo(map);
 }

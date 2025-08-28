@@ -16,6 +16,7 @@
     --shimmer-color: #d0d2d7;
     --gradient-1: #6dd5ed;
     --gradient-2: #2193b0;
+    --navbar-bg-color: rgba(255, 255, 255, 0.7);
 }
 
 body.dark-mode, html.dark-mode-preload {
@@ -30,10 +31,11 @@ body.dark-mode, html.dark-mode-preload {
     --shimmer-color: #4a4b4c;
     --gradient-1: #0f2027;
     --gradient-2: #2c5364;
+    --navbar-bg-color: rgba(20, 20, 20, 0.7);
 }
 
 html.dark-mode-preload body {
-    background-color: #121212 !important;
+    background-color: #18191a !important;
 }
 
 body {
@@ -60,8 +62,13 @@ h1, h2, h3, h4 {
     width: 100%;
     padding: 15px;
     box-sizing: border-box;
-    background-color: var(--card-bg-color);
+    background-color: var(--navbar-bg-color);
     border: 1px solid var(--border-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    margin: 20px auto;
+    max-width: 1200px;
+    border-radius: 8px;
 }
 
 .header {
@@ -80,7 +87,7 @@ h1, h2, h3, h4 {
     justify-content: space-between;
 }
 
-.header h1 {
+.header h1, .tab-content h2, .feature-container h2, .modal-header h3 {
     color: var(--primary-color);
 }
 
@@ -433,6 +440,10 @@ form button:hover {
     opacity: 0.9;
 }
 
+.modal-overlay, .modal-content, .modal-header, .modal-body, .modal-footer, #message-form {
+    transition: all 0.3s ease-in-out;
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -586,6 +597,22 @@ form button:hover {
 .skeleton-funding {
     height: 20px;
     width: 40%;
+}
+
+body.dark-mode form input,
+body.dark-mode form select,
+body.dark-mode form textarea {
+    background-color: var(--filter-bg-color);
+    border-color: #555;
+}
+
+body.dark-mode .feature-container form button {
+    background-color: var(--primary-color);
+    color: #fff;
+}
+
+body.dark-mode .feature-container form button:hover {
+    opacity: 0.9;
 }
 
 @media (min-width: 768px) {
