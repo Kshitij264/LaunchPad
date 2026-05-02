@@ -149,18 +149,18 @@ After login, users access a powerful role-based dashboard:
 ---
 
 ## 📂 Project Structure
-LaunchPad/
-│
-├── index.html # Landing Page
-├── style.css # Landing Page Styling
-├── script.js # Authentication + Map Logic
-│
-├── dashboard.html # Main Dashboard
-├── dashboard.css # Dashboard Styling
-├── dashboard.js # Core Application Logic
-│
-├── theme.js # Theme Toggle Logic
 
+**LaunchPad**
+
+- **index.html** – Entry landing page of the application  
+- **style.css** – Styles and UI design for landing page  
+- **script.js** – Handles authentication, modal logic, and map integration  
+
+- **dashboard.html** – Main application dashboard after login  
+- **dashboard.css** – Styling for dashboard components and layout  
+- **dashboard.js** – Core logic including data fetching, chat system, and role-based features  
+
+- **theme.js** – Manages dark/light mode with persistent storage  
 
 ---
 
